@@ -5,6 +5,7 @@ Sends a formatted summary to a Telegram chat via bot API.
 """
 
 import os
+import re
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
@@ -18,17 +19,22 @@ HEADERS = {
 }
 
 AI_KEYWORDS = [
-    "ai", "artificial intelligence", "machine learning", "ml", "llm",
-    "neural", "deep learning", "gpt", "agent", "transformer", "genai",
-    "generative", "chatbot", "nlp", "computer vision", "rag",
+    "artificial intelligence", "machine learning", "llm", "neural",
+    "deep learning", "gpt", "genai", "generative ai", "chatbot", "nlp",
+    "computer vision", "rag", "large language model", "transformer",
 ]
+
+AI_WORD_PATTERNS = [r"\bai\b", r"\bml\b", r"\bagent(s)?\b"]
 
 
 def is_ai_relevant(repo):
     """Second-pass check: topic tags alone aren't reliable (e.g. mistagged repos
-    like API gateways). Require the name/description to actually mention AI terms."""
+    like API gateways). Require the name/description to actually mention AI terms
+    as whole words/phrases -- not as a loose substring (e.g. 'ai' inside 'domain')."""
     text = f"{repo.get('name', '')} {repo.get('description') or ''}".lower()
-    return any(kw in text for kw in AI_KEYWORDS)
+    if any(kw in text for kw in AI_KEYWORDS):
+        return True
+    return any(re.search(pat, text) for pat in AI_WORD_PATTERNS)
 
 
 def get_ai_news(limit=5):
