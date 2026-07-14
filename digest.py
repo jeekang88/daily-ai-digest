@@ -17,6 +17,19 @@ HEADERS = {
     "User-Agent": "daily-ai-digest-bot",
 }
 
+AI_KEYWORDS = [
+    "ai", "artificial intelligence", "machine learning", "ml", "llm",
+    "neural", "deep learning", "gpt", "agent", "transformer", "genai",
+    "generative", "chatbot", "nlp", "computer vision", "rag",
+]
+
+
+def is_ai_relevant(repo):
+    """Second-pass check: topic tags alone aren't reliable (e.g. mistagged repos
+    like API gateways). Require the name/description to actually mention AI terms."""
+    text = f"{repo.get('name', '')} {repo.get('description') or ''}".lower()
+    return any(kw in text for kw in AI_KEYWORDS)
+
 
 def get_ai_news(limit=5):
     """Pull top AI headlines from Google News RSS (no API key required)."""
@@ -39,12 +52,12 @@ def get_top_starred_ai_repos(limit=10):
         "q": "topic:artificial-intelligence",
         "sort": "stars",
         "order": "desc",
-        "per_page": limit,
+        "per_page": limit * 3,  # fetch extra, since some get filtered out below
     }
-    resp = requests.get(url, params=params, timeout=15,
-                         headers=HEADERS)
+    resp = requests.get(url, params=params, timeout=15, headers=HEADERS)
     resp.raise_for_status()
     items = resp.json().get("items", [])
+    items = [r for r in items if is_ai_relevant(r)][:limit]
     lines = []
     for repo in items:
         lines.append(f"• {repo['full_name']} — {repo['stargazers_count']:,}★\n  {repo['html_url']}")
@@ -59,12 +72,12 @@ def get_fastest_rising_ai_repos(limit=10):
         "q": f"topic:artificial-intelligence created:>{since}",
         "sort": "stars",
         "order": "desc",
-        "per_page": limit,
+        "per_page": limit * 3,  # fetch extra, since some get filtered out below
     }
-    resp = requests.get(url, params=params, timeout=15,
-                         headers=HEADERS)
+    resp = requests.get(url, params=params, timeout=15, headers=HEADERS)
     resp.raise_for_status()
     items = resp.json().get("items", [])
+    items = [r for r in items if is_ai_relevant(r)][:limit]
     lines = []
     for repo in items:
         lines.append(f"• {repo['full_name']} — {repo['stargazers_count']:,}★ (new)\n  {repo['html_url']}")
