@@ -33,6 +33,7 @@ jobs:
           claude_args: |
             --allowedTools "Read,Write,WebSearch"
             --max-turns 15
+            --model claude-sonnet-5
 
       - name: Send to Telegram
         env:
