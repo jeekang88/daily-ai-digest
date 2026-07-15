@@ -21,18 +21,10 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            You are the frontliner to the AI office. Research and discover global
-            and local (Malaysia) AI related news for the past 7 days. Also note
-            2-3 notable trending AI tools/repos on GitHub right now.
-
-            Write your final digest as plain text to a file named digest_output.txt
-            in the current working directory. Format it as a concise Telegram
-            message: short bullet points, source names in brackets, no markdown
-            headers, plain readable text, under 3500 characters total. Do not
-            include anything else in the file besides the digest text itself.
+            Write the text "Digest test successful" to a file named digest_output.txt
+            in the current working directory. Do nothing else.
           claude_args: |
-            --allowedTools "Read,Write,WebSearch"
-            --max-turns 15
+            --max-turns 5
 
       - name: Send to Telegram
         env:
