@@ -27,6 +27,14 @@ AI_KEYWORDS = [
 AI_WORD_PATTERNS = [r"\bai\b", r"\bml\b", r"\bagent(s)?\b"]
 
 
+def escape_md(text):
+    """Escape Telegram legacy-Markdown special characters in dynamic text
+    (e.g. news headlines) so an unlucky title can't break the whole message."""
+    for ch in ["_", "*", "`", "["]:
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
 def is_ai_relevant(repo):
     """Second-pass check: topic tags alone aren't reliable (e.g. mistagged repos
     like API gateways). Require the name/description to actually mention AI terms
@@ -40,12 +48,15 @@ def is_ai_relevant(repo):
 def get_ai_news(limit=5):
     """Pull top AI headlines from Google News RSS (no API key required)."""
     url = "https://news.google.com/rss/search?q=artificial%20intelligence&hl=en-US&gl=US&ceid=US:en"
-    resp = requests.get(url, timeout=15)
-    root = ET.fromstring(resp.content)
+    resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0 (compatible; daily-ai-digest-bot/1.0)"})
+    resp.raise_for_status()
+    # Strip control characters that occasionally break XML parsing (invalid tokens)
+    clean_text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", resp.text)
+    root = ET.fromstring(clean_text)
     items = root.findall(".//item")[:limit]
     headlines = []
     for item in items:
-        title = item.find("title").text
+        title = escape_md(item.find("title").text)
         link = item.find("link").text
         headlines.append(f"• {title}\n  {link}")
     return headlines
@@ -66,7 +77,8 @@ def get_top_starred_ai_repos(limit=10):
     items = [r for r in items if is_ai_relevant(r)][:limit]
     lines = []
     for repo in items:
-        lines.append(f"• {repo['full_name']} — {repo['stargazers_count']:,}★\n  {repo['html_url']}")
+        name = escape_md(repo['full_name'])
+        lines.append(f"• {name} — {repo['stargazers_count']:,}★\n  {repo['html_url']}")
     return lines
 
 
@@ -86,7 +98,8 @@ def get_fastest_rising_ai_repos(limit=10):
     items = [r for r in items if is_ai_relevant(r)][:limit]
     lines = []
     for repo in items:
-        lines.append(f"• {repo['full_name']} — {repo['stargazers_count']:,}★ (new)\n  {repo['html_url']}")
+        name = escape_md(repo['full_name'])
+        lines.append(f"• {name} — {repo['stargazers_count']:,}★ (new)\n  {repo['html_url']}")
     return lines
 
 
